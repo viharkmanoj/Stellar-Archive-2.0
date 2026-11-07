@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { DashboardData } from "@/lib/types";
 import { Icon } from "./Icon";
 import { PlanetScene, StarMapVisual, WirePlanet } from "./Visuals";
@@ -15,7 +16,7 @@ function Navigation({ open, contrast, toggleContrast }: { open: (panel: Panel) =
       <a href="#dashboard" className="brand" aria-label="Stellar Archive home"><Icon name="spark" /><span>STELLAR ARCHIVE</span></a>
       <nav className="nav-pill" aria-label="Main navigation">
         <a href="#dashboard" aria-current="page">Dashboard</a>
-        <button onClick={() => open("catalog")}>Explore</button>
+        <Link href="/explore" prefetch={false}>Explore</Link>
         <a href="#ai-analysis">AI Analysis</a>
         <a href="#star-map">Star Map</a>
         <a href="#research">Research</a>
@@ -50,7 +51,7 @@ function Hero({ data, open }: { data: DashboardData; open: (panel: Panel) => voi
         <h1 id="hero-title">EXPLORE.<br />DISCOVER.<br /><span>ANALYZE.</span></h1>
         <p>An AI-powered platform for exoplanet discovery,<br className="desktop-break" /> celestial data analysis, and space research.</p>
         <div className="hero-actions">
-          <button className="button button-primary" onClick={() => open("catalog")}>EXPLORE DATA<Icon name="external" /></button>
+          <Link className="button button-primary" href="/explore" prefetch={false}>EXPLORE DATA<Icon name="external" /></Link>
           <button className="button button-outline" onClick={() => open("search")}>SEARCH EXOPLANETS<Icon name="target" /></button>
         </div>
       </div>

@@ -1,4 +1,12 @@
-import type { CatalogResponse, DashboardData, SearchResponse, TableInfo } from "./types";
+import type { CatalogResponse, ColumnsResponse, PaginatedCatalog, DashboardData, SearchResponse, TableInfo } from "./types";
+
+export class ArchiveApiError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(status === 404 ? "This catalog is no longer available." : "The archive service is unavailable. Please try again.");
+    this.status = status;
+  }
+}
 
 // Server-only configuration: the browser never needs the backend's address.
 const API_URL = (process.env.API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -8,7 +16,7 @@ async function request(path: string): Promise<unknown> {
     cache: "no-store",
     signal: AbortSignal.timeout(4000),
   });
-  if (!response.ok) throw new Error("Astronomy service unavailable");
+  if (!response.ok) throw new ArchiveApiError(response.status);
   return response.json();
 }
 
@@ -33,6 +41,31 @@ export async function getCatalog(): Promise<CatalogResponse> {
     throw new Error("Invalid catalog response");
   }
   return response as CatalogResponse;
+}
+
+export async function getCatalogPage(table: string, page: number, size: number): Promise<PaginatedCatalog> {
+  if (!table || !Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(size) || size < 1 || size > 100) {
+    throw new Error("Invalid catalog request");
+  }
+  const response = await request(`/api/catalog/${encodeURIComponent(table)}?${new URLSearchParams({ page: String(page), size: String(size) })}`);
+  if (!isObject(response) || response.table !== table || response.schema !== "stellar_archive" ||
+    response.page !== page || response.size !== size ||
+    !Number.isSafeInteger(response.total) || (response.total as number) < 0 ||
+    !Number.isSafeInteger(response.total_pages) || response.total_pages !== Math.ceil((response.total as number) / size) ||
+    !Array.isArray(response.data) || response.data.length > size || !response.data.every(isObject)) {
+    throw new Error("Invalid paginated catalog response");
+  }
+  return response as PaginatedCatalog;
+}
+
+export async function getColumns(table: string): Promise<ColumnsResponse> {
+  const response = await request(`/api/columns/${encodeURIComponent(table)}`);
+  if (!isObject(response) || response.table !== table || !Array.isArray(response.columns) ||
+    !response.columns.every((column) => isObject(column) && typeof column.name === "string" &&
+      typeof column.type === "string" && typeof column.nullable === "boolean" && typeof column.primary_key === "boolean")) {
+    throw new Error("Invalid column metadata response");
+  }
+  return response as ColumnsResponse;
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
